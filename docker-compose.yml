@@ -1,0 +1,80 @@
+services:
+  postgres-staging:
+    image: postgres:16-alpine
+    container_name: cidades-esg-postgres-staging
+    environment:
+      POSTGRES_DB: cidades_esg_staging
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_staging_data:/var/lib/postgresql/data
+    networks:
+      - cidades-esg-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cidades_esg_staging"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app-staging:
+    build: .
+    container_name: cidades-esg-api-staging
+    depends_on:
+      postgres-staging:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-staging:5432/cidades_esg_staging
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SERVER_PORT: 8080
+      APP_ENV: staging
+    ports:
+      - "8081:8080"
+    networks:
+      - cidades-esg-network
+
+  postgres-production:
+    image: postgres:16-alpine
+    container_name: cidades-esg-postgres-production
+    environment:
+      POSTGRES_DB: cidades_esg_production
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_production_data:/var/lib/postgresql/data
+    networks:
+      - cidades-esg-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cidades_esg_production"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app-production:
+    build: .
+    container_name: cidades-esg-api-production
+    depends_on:
+      postgres-production:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-production:5432/cidades_esg_production
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SERVER_PORT: 8080
+      APP_ENV: production
+    ports:
+      - "8082:8080"
+    networks:
+      - cidades-esg-network
+
+volumes:
+  postgres_staging_data:
+  postgres_production_data:
+
+networks:
+  cidades-esg-network:
+    driver: bridge
